@@ -218,3 +218,6 @@ pip-log.txt
 #UMC interpreter directories
 data/Python/x86/
 data/Python/x64/
+
+#UMC SESsion files
+*.ses
