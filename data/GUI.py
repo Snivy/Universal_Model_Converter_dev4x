@@ -192,6 +192,7 @@ def __ExPanel(X1,Y1,X2,Y2,EB,Na,MX=0,MY=0,St=True): #returns current state for o
 	
 	return State
 
+ORTHO = True
 def __DrawGUI(w,h,RotMatrix): #called directly by the display function after drawing the scene
 	global pw,ph
 	#the GUI is drawn over the scene by clearing the depth buffer
@@ -240,9 +241,14 @@ def __DrawGUI(w,h,RotMatrix): #called directly by the display function after dra
 		VIEWER.TOGGLE_LIGHTING = __TButton(pw*(221 if M else 11),ph*31,'EnLight',True,'Lighting')
 		VIEWER.TOGGLE_WIREFRAME = __TButton(pw*(221 if M else 11),ph*56,'EnWire',False,'Wireframe')
 		VIEWER.TOGGLE_BONES = __TButton(pw*(221 if M else 11),ph*81,'EnBone',True,'Bones')
-		
-		VIEWER.TOGGLE_ORTHO = __TButton(pw*(321 if M else 111),ph*31,'EnOrtho',True,'Ortho')
+
+		global ORTHO
+		if VIEWER.TOGGLE_ORTHO != ORTHO: W_States['EnOrtho'] = VIEWER.TOGGLE_ORTHO; ORTHO = VIEWER.TOGGLE_ORTHO #HACK
+		ORTHO = __TButton(pw*(321 if M else 111),ph*31,'EnOrtho',True,'Ortho')
+		VIEWER.TOGGLE_ORTHO = ORTHO
+
 		VIEWER.TOGGLE_3D = __TButton(pw*(321 if M else 111),ph*56,'En3D',False,'3D Analglyph')
+		VIEWER.TOGGLE_NORMALS = __TButton(pw*(321 if M else 111),ph*81,'EnNrm',False,'Normals')
 		
 	C = __ExPanel(pw*(211 if M else 1),ph*(h-150),pw*(w-(211 if A else 1)),ph*h,0,'CTRL',(0 if M else pw*105)+(0 if A else pw*-105))
 	

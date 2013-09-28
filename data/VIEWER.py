@@ -16,10 +16,14 @@ from tkFileDialog import askopenfilename,asksaveasfilename
 from LOGGING import LOG as __LOG, WRITE_LOG as __WLOG #will be moved to GUI
 import GUI as __GUI
 
-global Libs; Libs=[ [], # Materials
-                    [], # Nodes
+global Libs; Libs=[ [], # Reserved
+                    [], # Reserved
                     [["UMC_Def_Scene",[]]], # Scenes
-                    []] # Objects
+                    [], # Objects
+                    [], # Materials
+                    [], # Material Add-ins
+                    [], # Textures
+                    []] # Images
 
 #toggles
 TOGGLE_FULLSCREEN=0
@@ -30,12 +34,13 @@ TOGGLE_3D_MODE=[0,0]
 TOGGLE_WIREFRAME=0
 TOGGLE_BONES=1
 TOGGLE_GRID=2
+TOGGLE_NORMALS=0
 #TOGGLE_REDRAW=False
 
 #display list definition variables:
 global __TOP_GRID,__SIDE_GRID,__FRONT_GRID,\
     __QUAD_FLOOR,__LINE_FLOOR,\
-    __MODEL_DATA,__BONE_DATA
+    __MODEL_DATA,__NORMAL_DATA,__BONE_DATA
 #the bone data is seperate so it can be drawn over the model data (X-ray), or within the model data
 #(specified by clearing the depth buffer before drawing the bones)
 
@@ -242,8 +247,28 @@ __UMCGLPRIMITIVES = {
     UMC_QUADSTRIP:__GL.GL_QUAD_STRIP,
     UMC_POLYGON:__GL.GL_POLYGON}
 
+__GL_TEX = {}
 def __M():
-    global Libs,__UMCGLPRIMITIVES
+    global Libs,__UMCGLPRIMITIVES,__GL_TEX
+    __GL.glEnable(__GL.GL_TEXTURE_2D)
+    #__GL.glEnable(__GL.GL_ALPHA_TEST) #useless (deprecated anyways)
+    
+    #define textures here
+    __GL.glPixelStorei(__GL.GL_UNPACK_ALIGNMENT,1)
+    for Name,W,H,Pixels,Colors in Libs[7]:
+        image = bytearray()
+        if len(Colors)==0:
+            Format = len(Pixels[0])-1 #I, IA, RGB, or RGBA format
+            for IRAGBA in Pixels: image += bytearray(IRAGBA)
+        else:
+            Format = len(Colors[0])-1 #I, IA, RGB, or RGBA format
+            for I in Pixels: image += bytearray(Colors[I])
+            
+        __GL_TEX[Name] = __GL.glGenTextures(1)
+        __GL.glPixelStorei(__GL.GL_UNPACK_ALIGNMENT,1)
+        _IFMT = [__GL.GL_RGB, __GL.GL_RGBA, __GL.GL_RGB, __GL.GL_RGBA][Format]
+        _PXFMT = [__GL.GL_LUMINANCE,__GL.GL_LUMINANCE_ALPHA,__GL.GL_RGB,__GL.GL_RGBA][Format]
+        __GL.glTexImage2D(__GL.GL_TEXTURE_2D, 0, _IFMT, W, H, 0, _PXFMT, __GL.GL_UNSIGNED_BYTE, str(image))
 
     __GL.glColor3f(1.0,1.0,1.0)
     for Name,Objects in Libs[2]:
@@ -254,42 +279,42 @@ def __M():
             if SDType=="_Mesh":
                 __GL.glLineWidth(1.0)
 
-                MaterialName,MatNodeID,MatColors,Textures,R1,R2 = Libs[0][SDData1] if type(SDData1)==int else [ "UMC_Def_Mat", '', [[1.0,1.0,1.0,1.0],[1.0,1.0,1.0,1.0],[0.5,0.5,0.5,1.0],[0.0,0.0,0.0,0.0],25.0], [], [], [] ]
+                MaterialName,AddOn,MatColors,Textures,R1,R2 = Libs[4][SDData1] if type(SDData1)==int else [
+                    "UMC_Def_Mat", '', [[1.0,1.0,1.0,1.0],[1.0,1.0,1.0,1.0],[0.5,0.5,0.5,1.0],[0.0,0.0,0.0,0.0],25.0], [], [], []
+                    ]
                 
-                MAR,MAG,MAB,MAA = MatColors[0]
-                MDR,MDG,MDB,MDA = MatColors[1]
-                MSR,MSG,MSB,MSA = MatColors[2]
-                MER,MEG,MEB,MEA = MatColors[3]
-                MSV = MatColors[4]
-                __GL.glMaterialfv(__GL.GL_FRONT, __GL.GL_AMBIENT, [MAR,MAG,MAB,MAA])
-                __GL.glMaterialfv(__GL.GL_FRONT, __GL.GL_DIFFUSE, [MDR,MDG,MDB,MDA]);
-                __GL.glMaterialfv(__GL.GL_FRONT, __GL.GL_SPECULAR, [MSR,MSG,MSB,MSA]);
-                __GL.glMaterialfv(__GL.GL_FRONT, __GL.GL_EMISSION, [MER,MEG,MEB,MEA])
-                __GL.glMaterialf(__GL.GL_FRONT, __GL.GL_SHININESS, MSV)
+                MAR,MAG,MAB,MAA = MatColors[0] #Ambient
+                MDR,MDG,MDB,MDA = MatColors[1] #Diffuse
+                MSR,MSG,MSB,MSA = MatColors[2] #Specular
+                MER,MEG,MEB,MEA = MatColors[3] #Emmisive
+                MSV = MatColors[4] #Shininess
+                
+                C0R,C0G,C0B,C0A= (MAR+MDR)/2,(MAG+MDG)/2,(MAB+MDB)/2,(MAA+MDA)/2
 
-##                    # Create Texture
-##                    __GL.glBindTexture(__GL.GL_TEXTURE_2D, __GL.glGenTextures(1))   # 2d texture (x and y size)
-
-##                    __GL.glPixelStorei(__GL.GL_UNPACK_ALIGNMENT,1)
-##                    __GL.glTexImage2D(__GL.GL_TEXTURE_2D, 0, 3, ix, iy, 0, __GL.GL_RGBA, __GL.GL_UNSIGNED_BYTE, image)
-##                    __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_WRAP_S, __GL.GL_CLAMP)
-##                    __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_WRAP_T, __GL.GL_CLAMP)
-##                    __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_WRAP_S, __GL.GL_REPEAT)
-##                    __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_WRAP_T, __GL.GL_REPEAT)
-##                    __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_MAG_FILTER, __GL.GL_NEAREST)
-##                    __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_MIN_FILTER, __GL.GL_NEAREST)
-##                    __GL.glTexEnvf(__GL.GL_TEXTURE_ENV, __GL.GL_TEXTURE_ENV_MODE, __GL.GL_DECAL)
+                #call from pre-defined textures here
+                for TexID in Textures:
+                    TexName,TexParams,Reserved,ImageName = Libs[6][TexID]
+                    
+                    # Apply Texture(s)
+                    __GL.glBindTexture(__GL.GL_TEXTURE_2D, __GL_TEX[ImageName] )
+                    
+                    #__GL.glTexEnvf(__GL.GL_TEXTURE_ENV, __GL.GL_TEXTURE_ENV_MODE, __GL.GL_MODULATE)
+                    __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_WRAP_S, __GL.GL_CLAMP)
+                    __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_WRAP_T, __GL.GL_CLAMP)
+                    __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_WRAP_S, __GL.GL_REPEAT)
+                    __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_WRAP_T, __GL.GL_REPEAT)
+                    __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_MAG_FILTER, __GL.GL_NEAREST)
+                    __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_MIN_FILTER, __GL.GL_NEAREST)
+                    __GL.glTexEnvf(__GL.GL_TEXTURE_ENV, __GL.GL_TEXTURE_ENV_MODE, __GL.GL_MODULATE)
 
                 Verts,Normals,Colors,UVs,Weights,Primitives=SDData2
                 
                 LC0,LC1=[0,0,0,0],[0,0,0,0] #Remember last used colors (starts at transparent black)
                 for Primitive,Facepoints in Primitives:
                     __GL.glBegin(__UMCGLPRIMITIVES[Primitive])
-                    for V,N,Cs,Us in Facepoints:
-                        C0,C1=Cs; U0,U1,U2,U3,U4,U5,U6,U7=Us
+                    for V,N,(C0,C1),(U0,U1,U2,U3,U4,U5,U6,U7) in Facepoints:
 
-                        #once I support materials properly: (materials hold textures)
-                        #if U0!='': glMultiTexCoord2f(GL_TEXTURE0,Fl(UVs[0][U0][0]),Fl(UVs[0][U0][1]))
+                        if U0!='': __GL.glMultiTexCoord2f(__GL.GL_TEXTURE0,UVs[0][U0][0],UVs[0][U0][1])
                         #if U1!='': glMultiTexCoord2f(GL_TEXTURE1,Fl(UVs[1][U1][0]),Fl(UVs[1][U1][1]))
                         #if U2!='': glMultiTexCoord2f(GL_TEXTURE2,Fl(UVs[2][U2][0]),Fl(UVs[2][U2][1]))
                         #if U3!='': glMultiTexCoord2f(GL_TEXTURE3,Fl(UVs[3][U3][0]),Fl(UVs[3][U3][1]))
@@ -305,13 +330,7 @@ def __M():
                                              __if2f(Colors[0][C0][1]) if C0L>2 else __if2f(Colors[0][C0][0]),
                                              __if2f(Colors[0][C0][2]) if C0L>2 else __if2f(Colors[0][C0][0]),
                                              __if2f(Colors[0][C0][3]) if C0L==4 else (__if2f(Colors[0][C0][1]) if C0L==2 else 1.0)]
-                            
                             __GL.glColor4f((MAR+MDR+C0R)/3,(MAG+MDG+C0G)/3,(MAB+MDB+C0B)/3,(MAA+MDA+C0A)/3)
-                            __GL.glMaterialfv(GL_FRONT, GL_AMBIENT, [(MAR+C0R)/2,(MAG+C0G)/2,(MAB+C0B)/2,(MAA+C0A)/2])
-                            __GL.glMaterialfv(GL_FRONT, GL_DIFFUSE, [(MDR+C0R)/2,(MDG+C0G)/2,(MDB+C0B)/2,(MDA+C0A)/2])
-                            __GL.glMaterialfv(GL_FRONT, GL_SPECULAR, [(MSR+C0R)/2,(MSG+C0G)/2,(MSB+C0B)/2,(MSA+C0A)/2])
-                            __GL.glMaterialf(GL_FRONT, GL_SHININESS, 25.0)
-                            LC0=[C0R,C0G,C0B,C0A]
                                 
                         if C1!='': #IRAGBA format
                             C1L=len(Colors[1][C1])
@@ -319,18 +338,52 @@ def __M():
                                              __if2f(Colors[1][C1][1]) if C1L>2 else __if2f(Colors[1][C1][0]),
                                              __if2f(Colors[1][C1][2]) if C1L>2 else __if2f(Colors[1][C1][0]),
                                              __if2f(Colors[1][C1][3]) if C1L==4 else (__if2f(Colors[1][C1][1]) if C1L==2 else 1.0)]
-                            if LC1!=[C1R,C1G,C1B,C1A]: __GL.glSecondaryColor3f(C1R,C1G,C1B); LC1=[C1R,C1G,C1B,C1A]
+                            __GL.glSecondaryColor3f(C1R,C1G,C1B)
+                            
                             #Alpha is supported but not registered here (glSecondaryColor4f is not a registered function)
 
-                        if N!='': __GL.glNormal3f(Normals[N][0]*0.1,Normals[N][1]*0.1,Normals[N][2]*0.1)
+                        UpdateMat=0
+                        if LC0!=[C0R,C0G,C0B,C0A]: UpdateMat=1; LC0=[C0R,C0G,C0B,C0A]
+                        #if LC1!=[C1R,C1G,C1B,C1A]: UpdateMat=1; LC1=[C1R,C1G,C1B,C1A]
+                        if UpdateMat:
+                            __GL.glMaterialfv(__GL.GL_FRONT_AND_BACK, __GL.GL_AMBIENT, [(MAR+C0R)/2,(MAG+C0G)/2,(MAB+C0B)/2,(MAA+C0A)/2])
+                            __GL.glMaterialfv(__GL.GL_FRONT_AND_BACK, __GL.GL_DIFFUSE, [(MDR+C0R)/2,(MDG+C0G)/2,(MDB+C0B)/2,(MDA+C0A)/2])
+                            __GL.glMaterialfv(__GL.GL_FRONT_AND_BACK, __GL.GL_SPECULAR, [(MSR+C0R)/2,(MSG+C0G)/2,(MSB+C0B)/2,(MSA+C0A)/2])
+                            __GL.glMaterialfv(__GL.GL_FRONT_AND_BACK, __GL.GL_EMISSION, [MER,MEG,MEB,MEA])
+                            __GL.glMaterialf(__GL.GL_FRONT_AND_BACK, __GL.GL_SHININESS, MSV)
+
+                        if N!='': __GL.glNormal3f(Normals[N][0],Normals[N][1],Normals[N][2])
 
                         VL=len(Verts[V])
                         VX,VY,VZ=Verts[V]+([0.0] if VL==2 else [])
                         __GL.glVertex3f(VX,VY,VZ)
 
                     __GL.glEnd()
+    __GL.glDisable(__GL.GL_TEXTURE_2D)
+    #__GL.glDisable(__GL.GL_ALPHA_TEST)
 
-            elif SDType=="_DMesh": pass
+def __N():
+    global Libs,__UMCGLPRIMITIVES
+    __GL.glLineWidth(1.0)
+    __GL.glColor3f(0,1,1)
+    for Name,Objects in Libs[2]:
+        for ID in Objects:
+            ObjectName,Viewport,LRS,Sub_Data,Parent_ID=Libs[3][ID]
+            SDType,SDName,SDData1,SDData2=Sub_Data
+
+            if SDType=="_Mesh":
+                Verts,Normals,Colors,UVs,Weights,Primitives=SDData2
+                for Primitive,Facepoints in Primitives:
+                    __GL.glBegin(__GL.GL_LINES)
+                    for V,N,Cs,Us in Facepoints:
+                        if N!='':
+                            NX,NY,NZ=Normals[N][0],Normals[N][1],Normals[N][2]
+                            VL=len(Verts[V])
+                            VX,VY,VZ=Verts[V]+([0.0] if VL==2 else [])
+                            
+                            __GL.glVertex3f(VX,VY,VZ)
+                            __GL.glVertex3f(VX+NX,VY+NY,VZ+NZ)
+                    __GL.glEnd()
 
 def __B():
     global Libs
@@ -349,9 +402,9 @@ def __B():
                     __GL.glEnd()
 
 def __Draw_Scene():
-    global TOGGLE_FULLSCREEN,TOGGLE_LIGHTING,TOGGLE_3D,TOGGLE_WIREFRAME,TOGGLE_BONES,TOGGLE_ORTHO
+    global TOGGLE_FULLSCREEN,TOGGLE_LIGHTING,TOGGLE_3D,TOGGLE_WIREFRAME,TOGGLE_BONES,TOGGLE_ORTHO,TOGGLE_NORMALS
     global __viewMatrix
-    global __TOP_GRID,__SIDE_GRID,__FRONT_GRID,__QUAD_FLOOR,__LINE_FLOOR,__MODEL_DATA,__BONE_DATA
+    global __TOP_GRID,__SIDE_GRID,__FRONT_GRID,__QUAD_FLOOR,__LINE_FLOOR,__MODEL_DATA,__NORMAL_DATA,__BONE_DATA
 
     __GL.glMultMatrixf(__viewMatrix._getMtx())
 
@@ -365,6 +418,7 @@ def __Draw_Scene():
     __GL.glCallList(__MODEL_DATA) #finally got display lists working =D
 
     if TOGGLE_LIGHTING: __GL.glDisable(__GL.GL_LIGHTING) #disable for the grid and bones
+    if TOGGLE_NORMALS: __GL.glCallList(__NORMAL_DATA)
     if TOGGLE_BONES:
         if TOGGLE_BONES==2: __GL.glClear( __GL.GL_DEPTH_BUFFER_BIT ) #overlay the bones (X-Ray)
         __GL.glCallList(__BONE_DATA)
@@ -549,7 +603,7 @@ def __SDLVResize(W,H, VMODE): #A limitation of SDL (the GL context also needs to
     #DspInf = __pyg.display.Info()
 
     #UI display lists:
-    global __TOP_GRID,__SIDE_GRID,__FRONT_GRID,__QUAD_FLOOR,__LINE_FLOOR,__MODEL_DATA,__BONE_DATA
+    global __TOP_GRID,__SIDE_GRID,__FRONT_GRID,__QUAD_FLOOR,__LINE_FLOOR,__MODEL_DATA,__NORMAL_DATA,__BONE_DATA
 
     def G(D):
         __GL.glLineWidth(1.0)
@@ -604,6 +658,7 @@ def __SDLVResize(W,H, VMODE): #A limitation of SDL (the GL context also needs to
     __QUAD_FLOOR = __GL.glGenLists(1); __GL.glNewList(__QUAD_FLOOR, __GL.GL_COMPILE); F(0); __GL.glEndList()
     __LINE_FLOOR = __GL.glGenLists(1); __GL.glNewList(__LINE_FLOOR, __GL.GL_COMPILE); F(1); __GL.glEndList()
     __MODEL_DATA = __GL.glGenLists(1); __BONE_DATA = __GL.glGenLists(1)
+    __NORMAL_DATA = __GL.glGenLists(1)
 
     __GL.glClearColor(0.13, 0.13, 0.13, 1.0)
     __GL.glClearDepth(1.0)
@@ -617,9 +672,13 @@ def __SDLVResize(W,H, VMODE): #A limitation of SDL (the GL context also needs to
     __GL.glDisable(__GL.GL_BLEND) #disabled for models
     __GL.glBlendFunc(__GL.GL_SRC_ALPHA, __GL.GL_ONE_MINUS_SRC_ALPHA)
 
+    #__GL.glDisable(__GL.GL_ALPHA_TEST)
+    #__GL.glAlphaFunc(__GL.GL_GREATER, 0.1)
+
     __GL.glShadeModel(__GL.GL_SMOOTH)
     
     glNewList(__MODEL_DATA, GL_COMPILE); __M(); glEndList()
+    glNewList(__NORMAL_DATA, GL_COMPILE); __N(); glEndList()
     glNewList(__BONE_DATA, GL_COMPILE); __B(); glEndList()
 
     #__GUI.__ResizeGUI(W,H)
@@ -734,25 +793,27 @@ def Init():
                                 
                                 global Libs; __Libs=Libs #remember last session in case of a script error
 
-                                Libs=[[],[],[["Def_Scene",[]]],[]] #reset the data for importing
+                                Libs=[[],[],[["Def_Scene",[]]],[],[],[],[],[]] #reset the data for importing
                                 print 'Converting from import format...'
                                 
                                 try: #does the script contain any unfound errors?
                                     __LOG('-- importing %s --\n'%_in.split('/')[-1])
                                     i.ImportModel(it,None)
                                     print 'Verifying data...'
+
+                                    #export UMC session data
+                                    l=open('session.ses','w')
+                                    l.write(str([1,Libs]))
+                                    l.close()
+
                                     glNewList(__MODEL_DATA, GL_COMPILE); __M(); glEndList()
+                                    glNewList(__NORMAL_DATA, GL_COMPILE); __N(); glEndList()
                                     glNewList(__BONE_DATA, GL_COMPILE); __B(); glEndList()
                                     print 'Updating Viewer\n'
                                     
                                     __pyg.display.set_caption("Universal Model Converter v3.0a (dev4.5) - %s" % _in.split('/')[-1])
                                     #glutSetWindowTitle("Universal Model Converter v3.0a (dev5) - %s" % _in.split('/')[-1])
 
-                                    #export UMC session data
-                                    l=open('session.ses','w')
-                                    l.write(str([1,Libs]))
-                                    l.close()
-                                    
                                     COMMON.__ClearFiles() #clear the file data to be used for writing
 
                                 except:
