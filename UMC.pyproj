@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{883f7805-2ed6-4155-9ac1-d353a6a5b689}</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
+    <StartupFile>loader.py</StartupFile>
+    <SearchPath>C:\Universal_Model_Converter_dev4x\;</SearchPath>
+    <WorkingDirectory>C:\Universal_Model_Converter_dev4x</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <Name>PythonApplication1</Name>
+    <RootNamespace>PythonApplication1</RootNamespace>
+    <IsWindowsApplication>False</IsWindowsApplication>
+    <InterpreterId>ead05f52-3dc4-41e1-872e-cb8a566323e8</InterpreterId>
+    <InterpreterVersion>2.7</InterpreterVersion>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <CommandLineArguments>x86</CommandLineArguments>
+    <InterpreterPath>C:\Universal_Model_Converter_dev4x\data\Python\x86\pythonw.exe</InterpreterPath>
+    <InterpreterArguments>
+    </InterpreterArguments>
+    <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="API.py" />
+    <Compile Include="data\COMMON.py" />
+    <Compile Include="data\ERROR.py" />
+    <Compile Include="data\FORMAT.py" />
+    <Compile Include="data\GUI.py" />
+    <Compile Include="data\LOGGING.py" />
+    <Compile Include="data\VIEWER.py" />
+    <Compile Include="data\WIDGETS.py" />
+    <Compile Include="loader.py" />
+    <Compile Include="scripts\Blender.py" />
+    <Compile Include="scripts\MMD_PMD.py" />
+    <Compile Include="scripts\NTDO_MDL0.py" />
+    <Compile Include="scripts\PNG_image.py" />
+    <Compile Include="scripts\SSBM.py" />
+    <Compile Include="scripts\UMC_session.py" />
+    <Compile Include="scripts\Wavefront.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="data\" />
+    <Folder Include="libs\" />
+    <Folder Include="mods\" />
+    <Folder Include="scripts\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
+</Project>
