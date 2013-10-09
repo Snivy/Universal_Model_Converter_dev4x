@@ -293,19 +293,80 @@ def __M():
 
                 #call from pre-defined textures here
                 for TexID in Textures:
-                    TexName,TexParams,Reserved,ImageName = Libs[6][TexID]
+                    TexName,TexParams,TReserved1,TReserved2,ImageName,TReserved3 = Libs[6][TexID]
                     
                     # Apply Texture(s)
                     __GL.glBindTexture(__GL.GL_TEXTURE_2D, __GL_TEX[ImageName] )
                     
-                    #__GL.glTexEnvf(__GL.GL_TEXTURE_ENV, __GL.GL_TEXTURE_ENV_MODE, __GL.GL_MODULATE)
-                    __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_WRAP_S, __GL.GL_CLAMP)
-                    __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_WRAP_T, __GL.GL_CLAMP)
-                    __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_WRAP_S, __GL.GL_REPEAT)
-                    __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_WRAP_T, __GL.GL_REPEAT)
+                    #__GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_WRAP_S, __GL.GL_CLAMP)
+                    #__GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_WRAP_T, __GL.GL_CLAMP)
+                    __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_WRAP_S, __GL.GL_CLAMP_TO_EDGE)
+                    __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_WRAP_T, __GL.GL_CLAMP_TO_EDGE)
                     __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_MAG_FILTER, __GL.GL_NEAREST)
                     __GL.glTexParameterf(__GL.GL_TEXTURE_2D, __GL.GL_TEXTURE_MIN_FILTER, __GL.GL_NEAREST)
                     __GL.glTexEnvf(__GL.GL_TEXTURE_ENV, __GL.GL_TEXTURE_ENV_MODE, __GL.GL_MODULATE)
+                    '''
+                    glTexParameterf(
+                        GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D, GL_TEXTURE_1D_ARRAY,
+                        GL_TEXTURE_2D_ARRAY, GL_TEXTURE_RECTANGLE, GL_TEXTURE_CUBE_MAP
+                        ,
+                        GL_DEPTH_STENCIL_TEXTURE_MODE, GL_TEXTURE_BASE_LEVEL, GL_TEXTURE_BORDER_COLOR, 
+                        GL_TEXTURE_COMPARE_FUNC, GL_TEXTURE_COMPARE_MODE, GL_TEXTURE_LOD_BIAS, 
+                        GL_TEXTURE_MIN_FILTER, GL_TEXTURE_MAG_FILTER, GL_TEXTURE_MIN_LOD, 
+                        GL_TEXTURE_MAX_LOD, GL_TEXTURE_MAX_LEVEL, GL_TEXTURE_SWIZZLE_R, 
+                        GL_TEXTURE_SWIZZLE_G, GL_TEXTURE_SWIZZLE_B, GL_TEXTURE_SWIZZLE_A, 
+                        GL_TEXTURE_SWIZZLE_RGBA, GL_TEXTURE_WRAP_S, GL_TEXTURE_WRAP_T, GL_TEXTURE_WRAP_R
+                        ,
+                        GL_DEPTH_STENCIL_TEXTURE_MODE: GL_DEPTH_COMPONENT, GL_STENCIL_COMPONENT
+                        GL_TEXTURE_BASE_LEVEL: int(MipMap)
+                        GL_TEXTURE_BORDER_COLOR: [R,G,B,A]
+                        GL_TEXTURE_COMPARE_FUNC: GL_LEQUAL, GL_GEQUAL, GL_LESS, GL_GREATER,
+                            GL_EQUAL, GL_NOTEQUAL, GL_ALWAYS, GL_NEVER
+                            #NOTE: GL_TEXTURE_COMPARE_MODE = GL_COMPARE_REF_TO_TEXTURE
+                        GL_TEXTURE_COMPARE_MODE: GL_COMPARE_REF_TO_TEXTURE, GL_NONE 
+                        GL_TEXTURE_LOD_BIAS: float(Bias)
+                        GL_TEXTURE_MIN_FILTER: GL_NEAREST, GL_LINEAR, GL_NEAREST_MIPMAP_NEAREST
+                            GL_LINEAR_MIPMAP_NEAREST, GL_NEAREST_MIPMAP_LINEAR, GL_LINEAR_MIPMAP_LINEAR
+                        GL_TEXTURE_MAG_FILTER: GL_NEAREST, GL_LINEAR
+                        GL_TEXTURE_MIN_LOD: -1000
+                        GL_TEXTURE_MAX_LOD: 1000
+                        GL_TEXTURE_MAX_LEVEL: 1000
+                        GL_TEXTURE_SWIZZLE_R: GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA, GL_ZERO, GL_ONE
+                        GL_TEXTURE_SWIZZLE_G: GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA, GL_ZERO, GL_ONE
+                        GL_TEXTURE_SWIZZLE_B: GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA, GL_ZERO, GL_ONE
+                        GL_TEXTURE_SWIZZLE_A: GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA, GL_ZERO, GL_ONE
+                        GL_TEXTURE_SWIZZLE_RGBA: GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA, GL_ZERO, GL_ONE
+                        GL_TEXTURE_WRAP_S: GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT,
+                            GL_REPEAT, GL_MIRROR_CLAMP_TO_EDGE
+                        GL_TEXTURE_WRAP_T: GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT,
+                            GL_REPEAT, GL_MIRROR_CLAMP_TO_EDGE
+                        GL_TEXTURE_WRAP_R: GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, GL_MIRRORED_REPEAT,
+                            GL_REPEAT, GL_MIRROR_CLAMP_TO_EDGE
+                        )
+
+                    glTexEnvf(
+                        GL_TEXTURE_ENV, GL_POINT_SPRITE_OES
+                        , 
+                        GL_TEXTURE_ENV_MODE, GL_COMBINE_RGB, GL_COMBINE_ALPHA, 
+                        GL_SRC0_RGB, GL_SRC1_RGB, GL_SRC2_RGB, 
+                        GL_SRC0_ALPHA, GL_SRC1_ALPHA, GL_SRC2_ALPHA, 
+                        GL_OPERAND0_RGB, GL_OPERAND1_RGB, GL_OPERAND2_RGB, 
+                        GL_OPERAND0_ALPHA, GL_OPERAND1_ALPHA, GL_OPERAND2_ALPHA, 
+                        GL_RGB_SCALE, GL_ALPHA_SCALE, GL_COORD_REPLACE_OES
+                        ,
+                        GL_ADD, GL_ADD_SIGNED, GL_DOT3_RGB, GL_DOT3_RGBA, 
+                        GL_INTERPOLATE, GL_MODULATE, GL_DECAL, GL_BLEND, 
+                        GL_REPLACE, GL_SUBTRACT, GL_COMBINE, GL_TEXTURE, 
+                        GL_CONSTANT, GL_PRIMARY_COLOR, GL_PREVIOUS, GL_SRC_COLOR, 
+                        GL_ONE_MINUS_SRC_COLOR, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+                        (a single boolean value for the point sprite texture coordinate replacement, 
+                            or 1.0, 2.0, or 4.0 when specifying the GL_RGB_SCALE or GL_ALPHA_SCALE)
+                        )
+                    '''
+
+                    print ObjectName,'-', MaterialName,'-', TexName,'-', ImageName,':', ImageName in __GL_TEX
+
+                    
 
                 Verts,Normals,Colors,UVs,Weights,Primitives=SDData2
                 
@@ -313,16 +374,18 @@ def __M():
                 for Primitive,Facepoints in Primitives:
                     __GL.glBegin(__UMCGLPRIMITIVES[Primitive])
                     for V,N,(C0,C1),(U0,U1,U2,U3,U4,U5,U6,U7) in Facepoints:
-
-                        if U0!='': __GL.glMultiTexCoord2f(__GL.GL_TEXTURE0,UVs[0][U0][0],UVs[0][U0][1])
-                        #if U1!='': glMultiTexCoord2f(GL_TEXTURE1,Fl(UVs[1][U1][0]),Fl(UVs[1][U1][1]))
-                        #if U2!='': glMultiTexCoord2f(GL_TEXTURE2,Fl(UVs[2][U2][0]),Fl(UVs[2][U2][1]))
-                        #if U3!='': glMultiTexCoord2f(GL_TEXTURE3,Fl(UVs[3][U3][0]),Fl(UVs[3][U3][1]))
-                        #if U4!='': glMultiTexCoord2f(GL_TEXTURE4,Fl(UVs[4][U4][0]),Fl(UVs[4][U4][1]))
-                        #if U5!='': glMultiTexCoord2f(GL_TEXTURE5,Fl(UVs[5][U5][0]),Fl(UVs[5][U5][1]))
-                        #if U6!='': glMultiTexCoord2f(GL_TEXTURE6,Fl(UVs[6][U6][0]),Fl(UVs[6][U6][1]))
-                        #if U7!='': glMultiTexCoord2f(GL_TEXTURE7,Fl(UVs[7][U7][0]),Fl(UVs[7][U7][1]))
-                        #max texture is 31
+                        try:
+                            if U0!='': __GL.glMultiTexCoord2f(__GL.GL_TEXTURE0,UVs[0][U0][0],UVs[0][U0][1])
+                            #if U1!='': glMultiTexCoord2f(GL_TEXTURE1,Fl(UVs[1][U1][0]),Fl(UVs[1][U1][1]))
+                            #if U2!='': glMultiTexCoord2f(GL_TEXTURE2,Fl(UVs[2][U2][0]),Fl(UVs[2][U2][1]))
+                            #if U3!='': glMultiTexCoord2f(GL_TEXTURE3,Fl(UVs[3][U3][0]),Fl(UVs[3][U3][1]))
+                            #if U4!='': glMultiTexCoord2f(GL_TEXTURE4,Fl(UVs[4][U4][0]),Fl(UVs[4][U4][1]))
+                            #if U5!='': glMultiTexCoord2f(GL_TEXTURE5,Fl(UVs[5][U5][0]),Fl(UVs[5][U5][1]))
+                            #if U6!='': glMultiTexCoord2f(GL_TEXTURE6,Fl(UVs[6][U6][0]),Fl(UVs[6][U6][1]))
+                            #if U7!='': glMultiTexCoord2f(GL_TEXTURE7,Fl(UVs[7][U7][0]),Fl(UVs[7][U7][1]))
+                            #max texture is 31
+                        except: #TODO: note UV display error
+                            pass
 
                         if C0!='': #IRAGBA format
                             C0L=len(Colors[0][C0])
@@ -349,6 +412,7 @@ def __M():
                             __GL.glMaterialfv(__GL.GL_FRONT_AND_BACK, __GL.GL_AMBIENT, [(MAR+C0R)/2,(MAG+C0G)/2,(MAB+C0B)/2,(MAA+C0A)/2])
                             __GL.glMaterialfv(__GL.GL_FRONT_AND_BACK, __GL.GL_DIFFUSE, [(MDR+C0R)/2,(MDG+C0G)/2,(MDB+C0B)/2,(MDA+C0A)/2])
                             __GL.glMaterialfv(__GL.GL_FRONT_AND_BACK, __GL.GL_SPECULAR, [(MSR+C0R)/2,(MSG+C0G)/2,(MSB+C0B)/2,(MSA+C0A)/2])
+                            #__GL.glMaterialfv(__GL.GL_FRONT_AND_BACK, __GL.GL_SPECULAR, [0,0,0,1])
                             __GL.glMaterialfv(__GL.GL_FRONT_AND_BACK, __GL.GL_EMISSION, [MER,MEG,MEB,MEA])
                             __GL.glMaterialf(__GL.GL_FRONT_AND_BACK, __GL.GL_SHININESS, MSV)
 

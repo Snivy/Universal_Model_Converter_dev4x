@@ -258,6 +258,262 @@ def ImportModel(T,C):
         if Next>32: _Object(Next)
 
     ################################################################################################
+    '''read a DAT image structure'''
+
+    def t44(img,w,tile,x,y):
+        tx,ty = 0,0
+        for c in tile:
+            img[((y+ty)*w)+x+tx]=c
+            if tx<3: tx+=1
+            else: tx=0; ty+=1
+
+    def t84(img,w,tile,x,y):
+        tx,ty = 0,0
+        for c in tile:
+            img[((y+ty)*w)+x+tx]=c
+            if tx<7: tx+=1
+            else: tx=0; ty+=1
+
+    def t88(img,w,tile,x,y):
+        tx,ty = 0,0
+        for c in tile:
+            img[((y+ty)*w)+x+tx]=c
+            if tx<7: tx+=1
+            else: tx=0; ty+=1
+
+    def ct44(d):
+        d1,d2,di = d
+
+        p = [[0,0,0,255],[0,0,0,255],[0,0,0,255],[0,0,0,255]]
+
+        p[0][0] = int(((d1>>11)&31)*(255.0/31))
+        p[0][1] = int(((d1>>5)&63)*(255.0/63))
+        p[0][2] = int((d1&31)*(255.0/31))
+
+        p[1][0] = int(((d2>>11)&31)*(255/31))
+        p[1][1] = int(((d2>>5)&63)*(255/63))
+        p[1][2] = int((d2&31)*(255/31))
+
+        if d1>d2:
+            p[2][0] = ((p[0][0]*2) + p[1][0]) / 3
+            p[2][1] = ((p[0][1]*2) + p[1][1]) / 3
+            p[2][2] = ((p[0][2]*2) + p[1][2]) / 3
+        
+            p[3][0] = (p[0][0] + (p[1][0]*2)) / 3
+            p[3][1] = (p[0][1] + (p[1][1]*2)) / 3
+            p[3][2] = (p[0][2] + (p[1][2]*2)) / 3
+
+        else:
+            p[2][0] = (p[0][0] + p[1][0])/2; p[2][1] = (p[0][1] + p[1][1])/2; p[2][2] = (p[0][2] + p[1][2])/2
+        
+            p[3][3] = 0
+
+        return [p[(di>>30)&3],p[(di>>28)&3],p[(di>>26)&3],p[(di>>24)&3],
+                p[(di>>22)&3],p[(di>>20)&3],p[(di>>18)&3],p[(di>>16)&3],
+                p[(di>>14)&3],p[(di>>12)&3],p[(di>>10)&3],p[(di>>8)&3],
+                p[(di>>6)&3] ,p[(di>>4)&3] ,p[(di>>2)&3] ,p[(di>>0)&3]]
+
+    def _Image(offset):
+        Jump(offset, label=' -- Image Struct')
+        
+        Data = bu32(    label=' -- Pixel Data Offset')
+        Width = bu16(   label=' -- Width')
+        Height = bu16(  label=' -- Height')
+        Format = bu32(  label=' -- Format')
+
+        Jump(Data, label=' -- Pixel Data')
+        ratio = (Width*Height)
+
+        switch(Format)
+        if case(0): #I4 (8bit = 2 pixels
+            img = [[0]]*ratio
+            tile = [[0]]*64
+            for y in range(0,Height,8):
+                for x in range(0,Width,8):
+                    for i,d in enumerate(bu8(['']*32)):
+                        i*=2
+                        tile[i][0] = (d&240)|(d>>4) #format 8bit (FF,EE,DD,CC,...)
+                        tile[i+1][0] = ((d&15)<<4)|(d&15)
+
+                    t88(img,Width,tile,x,y)
+
+        if case(1): #I8
+            img = [[0]]*ratio
+            
+            for y in range(0,Height,4):
+                for x in range(0,Width,8): t84(img,Width,bu8(['']*ratio),x,y)
+
+        if case(2): #IA4
+            img = [[0,0]]*ratio
+
+            tile = [[0,0]]*32
+            for y in range(0,Height,4):
+                for x in range(0,Width,8):
+                    for i,d in enumerate(bu8(['']*32)):
+                        tile[i][0] = (d&240)|(d>>4)
+                        tile[i][1] = ((d&15)<<4)|(d&15)
+
+                    t84(img,Width,tile,x,y)
+
+        if case(3): #IA8
+            img = [[0,0,0,255]]*ratio
+            for y in range(0,Height,4):
+                for x in range(0,Width,4):
+                    t44(img,Width,[
+                        bu8(['','']),bu8(['','']),bu8(['','']),bu8(['','']),
+                        bu8(['','']),bu8(['','']),bu8(['','']),bu8(['','']),
+                        bu8(['','']),bu8(['','']),bu8(['','']),bu8(['','']),
+                        bu8(['','']),bu8(['','']),bu8(['','']),bu8(['',''])],x,y)
+
+        if case(4): #RGB565
+            img = [[0,0,0,255]]*ratio
+            tile = [[0,0,0,255]]*16
+
+            i,x,y = 0,0,0
+            for d in bu16(['']*ratio):
+                tile[i][0] = d>>11; tile[i][1] = (d>>5)&63; tile[i][2] = d&31
+
+                i+=1
+                if i==16:
+                    i=0
+                    t44(img,Width,tile,x*4,y*4)
+                    x+=1
+                    if x==Width/8: x=0; y+=1
+
+        if case(5): #RGB5A3
+            img = [[0,0,0,255]]*ratio
+            tile = [[0,0,0,255]]*16
+
+            i,x,y = 0,0,0
+            for d in bu16(['']*ratio):
+                if d>>15: tile[i][0] = (d>>11)&15; tile[i][1] = (d>>7)&15; tile[i][2] = (d>>3)&15; tile[i][3] = d&7
+                else: tile[i][0] = (d>>10)&31; tile[i][1] = (d>>5)&31; tile[i][2] = d&31
+
+                i+=1
+                if i==16:
+                    i=0
+                    t44(img,Width,tile,x*4,y*4)
+                    x+=1
+                    if x==Width/8: x=0; y+=1
+
+        if case(6): #RGBA8
+            img = [[0,0,0,0]]*ratio
+
+            for y in range(0,Height,4):
+                for x,(AR,GB) in enumerate(StructArr([[['bu8','bu8']]*16,[['bu8','bu8']]*16],Width/4)):
+                    
+                    tile = [[R,GB[i][0],GB[i][1],A] for i,(A,R) in enumerate(AR) ]
+                    t44(img,Width,tile,x,y)
+
+        if case(8): #CI4 (TODO)
+            img = [[0,0,0,0]]*ratio
+
+        if case(9): #CI8 (TODO)
+            img = [[0,0,0,0]]*ratio
+
+        if case(10): #CI14 (TODO)
+            img = [[0,0,0,0]]*ratio
+
+        if case(14): #CMPR
+            img = [[0,0,0,0]]*ratio
+
+            for y in range(0,Height,8):
+                for x in range(0,Width,8):
+                    t1 = ct44([bu16(),bu16(),bu32()]); t2 = ct44([bu16(),bu16(),bu32()])
+                    t3 = ct44([bu16(),bu16(),bu32()]); t4 = ct44([bu16(),bu16(),bu32()])
+
+                    tile =  t1[0:4]+t2[0:4]+ t1[4:8]+t2[4:8]+\
+                              t1[8:12]+t2[8:12]+ t1[12:16]+t2[12:16]+\
+                            t3[0:4]+t4[0:4]+ t3[4:8]+t4[4:8]+\
+                              t3[8:12]+t4[8:12]+ t3[12:16]+t4[12:16]
+
+                    t88(img,Width,tile,x,y)
+
+        name='img'+str_off(offset)
+
+        SetImage(name,Width,Height,img)
+
+    ################################################################################################
+    '''read a DAT texture structure'''
+    def _Texture(offset):
+        Jump(offset, label=' -- Texture Struct')
+        
+        name='tex'+str_off(offset)
+
+        unk = bu32(         label=' -- Unknown')
+        Next = bu32(        label=' -- Next Texture Offset')+32
+        unk3 = bu32(        label=' -- Unknown')
+        LayerFlags = bu32(  label=' -- Layer Flags')
+
+        unk4 = bu32(        label=' -- Unknown')
+        unk5 = bu32(        label=' -- Unknown')
+        unk6 = bu32(        label=' -- Unknown')
+        unk7 = bf32(        label=' -- Unknown')
+
+        MaxX = bf32(        label=' -- (?) TexClamp Max X')
+        MaxY = bf32(        label=' -- (?) TexClamp Max Y')
+        Angle = bf32(       label=' -- (?) TexClamp Angle')
+        MinX = bf32(        label=' -- (?) TexClamp Min X')
+        MinY = bf32(        label=' -- (?) TexClamp Min Y')
+        
+        WrapS = bu32(       label=' -- Wrap S')
+        WrapT = bu32(       label=' -- Wrap T')
+
+        ScaleX = bu8(       label=' -- Scale X')
+        ScaleY = bu8(       label=' -- Scale Y')
+        
+        unk8 = bu16(        label=' -- Unknown')
+
+        unk9 = bu32(        label=' -- Unknown') #or bu16(['',''])
+        unk10 = bf32(       label=' -- Unknown')
+        unk11 = bu32(       label=' -- Unknown')
+        
+        Image = bu32(       label=' -- Image Offset')+32
+        Pallet = bu32(      label=' -- Pallet Offset')+32
+        unk12 = bu32(       label=' -- Unknown')
+        unk13 = bu32(       label=' -- Unknown Offset')+32
+
+        #TODO: apply texture settings
+        SetTexture(name)
+
+        if Image>32: _Image(Image)
+
+        if Next>32: _Texture(Next)
+
+    ################################################################################################
+    '''read a DAT material-colors structure'''
+    def _Colors(offset):
+        Jump(offset, label=' -- Material-Colors Struct')
+        
+        D = bu8(['','','',''],  label=' -- Diffuse')
+        A = bu8(['','','',''],  label=' -- Ambient')
+        S = bu8(['','','',''],  label=' -- Specular')
+        unk = bf32(             label=' -- Unknown') #usually 1.0
+        unk2 = bf32(            label=' -- Unknown') #seen 50.0 (shininess??)
+
+        SetMatColors(A,D,S)
+
+    ################################################################################################
+    '''read the data structure of a DAT material'''
+    def _Material(offset):
+        Jump(offset, label=' -- Material Struct')
+        
+        unk = bu32(     label=' -- Unknown')
+        flags = bu32(   label=' -- Unknown Flags')
+        Texture = bu32( label=' -- Texture Offset')+32
+        Colors = bu32(  label=' -- Material Colors Offset')+32
+        unk2 = bu32(    label=' -- Unknown')
+        unk3 = bu32(    label=' -- Unknown')
+
+        name='mat'+str_off(offset)
+
+        SetMaterial(name)
+
+        if Colors>32: _Colors(Colors) #colors are already defaulted
+
+        if Texture>32: _Texture(Texture)
+
+    ################################################################################################
     '''read the data structure of a DAT mesh object'''
     #NOTE: the term 'Mesh' may change
     def _Mesh(offset):
@@ -268,9 +524,10 @@ def ImportModel(T,C):
         Material = bu32(label=' -- Material Struct Offset')+32
         Object = bu32(  label=' -- Object Struct Offset')+32
 
-        if Next>32: _Mesh(Next)
-        if Material>32: pass #Material_MAP(Material) #materials/textures aren't used by UMC yet >_>
         if Object>32: _Object(Object)
+        if Material>32: _Material(Material)
+        if Next>32: _Mesh(Next)
+
 
     ################################################################################################
     '''read and transform a DAT bone before storing it's data'''

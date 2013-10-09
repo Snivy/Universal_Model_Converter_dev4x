@@ -6,16 +6,6 @@ from LOGGING import LOG as __LOG
 
 """
 
-- SetMaterial(): TODO
-###
-at this moment, the current data standards don't allow for proper materials.
-I'm already working on resolving this.
-current plans include:
-#1 - set the active object's type to 'mesh' (if not already)
-#2 - create a new active material in the data library, or index a material from the data library
-#3 - set the material index in the Mesh-type Object
-(values for the Shader will be integrated within the Material)
-
 - SetMatNode(): TODO
 ###
 these are extremely complicated and will take quite a while to solve
@@ -38,24 +28,52 @@ DLRS=[0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,1.0,1.0]
 DM=[[1.0,0.0,0.0,0.0], [0.0,1.0,0.0,0.0], [0.0,0.0,1.0,0.0], [0.0,0.0,0.0,1.0]]
 #___________________________________________________________________________________________
 
-#[Materials,Nodes,Scenes,Objects]
-import VIEWER
+import VIEWER #for interfacing with Libs
 
 #Active Data:
 ActiveScene = 0
 ActiveObject = None
 ActiveMaterial = None
+ActiveTexture = None
+ActiveImage = None #for image pallets (TODO)
 ActivePrimitive = 0 #in active object
 
 def __GetOID(N): #check for specified object name/ID
-    ID=''
-    if type(N)==int: ID=('' if N>len(VIEWER.Libs[3]) else N) #N=1
+    if type(N)==int: return '' if N>len(VIEWER.Libs[3]) else N
     else: #N="Object1"
-        ###need a faster indexing method here
-        ###VIEWER.Libs[3].index(N) won't work as VIEWER.Libs[3] values are lists with random internal datas
-        for I,O in enumerate(VIEWER.Libs[3]): #TODO: use a while loop (stop the loop if found)
-            if O[0]==N: ID=I
-    return ID #return int() if found
+        for I,O in enumerate(VIEWER.Libs[3]):
+            if O[0]==N: return I #break out of the loop
+    return ''
+
+BoneLib = []
+def GetBID(S): #check for specified bone name/ID
+    global BoneLib
+    if type(S)==int: return '' if S>len(BoneLib) else S
+    else: #S="Bone1"
+        for I,B in enumerate(BoneLib):
+            if B[0]==S: return I #break out of the loop
+    return ''
+
+def __GetMID(N): #check for specified material name/ID
+    if type(N)==int: return '' if N>len(VIEWER.Libs[4]) else N
+    else: #N="Material1"
+        for I,M in enumerate(VIEWER.Libs[4]):
+            if M[0]==N: return I #break out of the loop
+    return ''
+
+def __GetTID(N): #check for specified texture name/ID
+    if type(N)==int: return '' if N>len(VIEWER.Libs[6]) else N
+    else: #N="Texture1"
+        for I,T in enumerate(VIEWER.Libs[6]):
+            if T[0]==N: return I #break out of the loop
+    return ''
+
+def __GetIID(N): #check for specified image name/ID
+    if type(N)==int: return '' if N>len(VIEWER.Libs[7]) else N
+    else: #N="Image1"
+        for I,img in enumerate(VIEWER.Libs[7]):
+            if img[0]==N: return I #break out of the loop
+    return ''
     
 #___________________________________________________________________________________________
 
@@ -131,29 +149,18 @@ def SetBone( Name="Bone0", Viewport=0, LocRotSca=[], BindMtx=[], ParentName='', 
     global ActiveObject,BoneLib,N,VP,LRS,BM,PA,PR,DLRS
     BoneLib=VIEWER.Libs[3][ActiveObject][3][3]
 
-    def GetID(S): #check for specified bone name/ID
-        global BoneLib
-        ID=''
-        if type(S)==int: ID=('' if S>len(BoneLib) else S) #S=1
-        else: #S="Bone1"
-            ###need a faster indexing method here
-            ###BoneLib.index(N) won't work as BoneLib values are lists with random internal datas
-            for I,B in enumerate(BoneLib):
-                if B[0]==S: ID=I
-        return ID
-    
     #Verify Data: (use Defaults if neccesary)
     N  = (Name if type(Name)==str else "Bone"+str(len(BoneLib)))
     VP = (Viewport if (Viewport>0 and Viewport<25) else 1)
     LRS= (DLRS if len(LocRotSca)!=9 else LocRotSca) #TODO: advanced LRS verification
     BM = (DM if len(BindMtx)!=4 else BindMtx) #TODO: advanced matrix verification
-    PA = (GetID(ParentName) if ParentName!=('__REMOVE__' or '') else '')
-    PR = (GetID(PreviousName) if PreviousName!='' else '')
+    PA = (GetBID(ParentName) if ParentName!=('__REMOVE__' or '') else '')
+    PR = (GetBID(PreviousName) if PreviousName!='' else '')
 
     def Set():
         global ActiveObject,N,VP,LRS,BM,PA,PR,BoneLib
         #manage the bone data:
-        BID= GetID(N) if len(BoneLib)>0 else '' #try to get an active object index
+        BID= GetBID(N) if len(BoneLib)>0 else '' #try to get an active object index
         if BID=='': VIEWER.Libs[3][ActiveObject][3][3]+=[[N,VP,LRS,BM,PA,PR]] #add a new bone
         else: VIEWER.Libs[3][ActiveObject][3][3][BID]=[BoneLib[BID][0], #edit the specified bone
             ((VP if Viewport!=0 else BoneLib[BID][1]) if BoneLib[BID][1]!=VP else BoneLib[BID][1]),
@@ -278,6 +285,17 @@ def SetUVs( List0=[], List1=[], List2=[], List3=[], List4=[], List5=[], List6=[]
 
 #append a facepoint to the active primitive with the specified vectors
 #(colors and uv's in list format are assumed to be single channel, and are read as such)
+def __Index(value,List,Type=''): #returns either a valid index or ''
+    if type(value)==tuple: value=list(value)
+    if type(value)==list: #[X,Y(,Z)] or [I/R(,A/G(,B(,A)))]
+        try: return List.index(value)
+        except: 
+            List+=[value]
+            __LOG('---FORMAT---: set %s: %s'%(Type,str(value)))
+            return List.index(value) #vector or color
+    elif type(value)==int: return value #index (doesn't validate against len(list))
+    elif type(value)==str: return '' #no vector (validate any string to '')
+    
 def SetFacepoint( Vert='', Normal='', Color='', UV='' ):
     global ActiveObject
     #verify we havn't switched objects to an invalid type before trying to add facepoints:
@@ -285,33 +303,23 @@ def SetFacepoint( Vert='', Normal='', Color='', UV='' ):
         if len(VIEWER.Libs[3][ActiveObject][3][3])>0: #we can't append facepoints to an object with no primitives.
             Colors,UVs = VIEWER.Libs[3][ActiveObject][3][3][2],VIEWER.Libs[3][ActiveObject][3][3][3]
             
-            def Index(value,List,Type=''): #returns either a valid index or ''
-                if type(value)==list: #[X,Y(,Z)] or [I/R(,A/G(,B(,A)))]
-                    try: return List.index(value)
-                    except: 
-                        List+=[value]
-                        __LOG('---FORMAT---: set %s: %s'%(Type,str(value)))
-                        return List.index(value) #vector or color
-                elif type(value)==int: return value #index (doesn't validate against len(list))
-                elif type(value)==str: return '' #no vector (validate any string to '')
-                
-            VID = Index(Vert,VIEWER.Libs[3][ActiveObject][3][3][0],'Vert')
+            VID = __Index(Vert,VIEWER.Libs[3][ActiveObject][3][3][0],'Vert')
             
-            NID = Index(Normal,VIEWER.Libs[3][ActiveObject][3][3][1],'Nornal')
+            NID = __Index(Normal,VIEWER.Libs[3][ActiveObject][3][3][1],'Nornal')
                 
-            CIDs = ( (Index(Color[0],Colors[0],'Color0')
-                     ,(Index(Color[1],Colors[1],'Color1') if len(Color)==2 else '')
-                     ) if type(Color)==tuple else (Index(Color,Colors[0]),'') )
+            CIDs = ( (__Index(Color[0],Colors[0],'Color0')
+                     ,(__Index(Color[1],Colors[1],'Color1') if len(Color)==2 else '')
+                     ) if type(Color)==tuple else (__Index(Color,Colors[0]),'') )
             
-            UVIDs = ( (Index(UV[0],UVs[0],'UV0')
-                      ,(Index(UV[1],UVs[1],'UV1') if len(UV)>=2 else '')
-                      ,(Index(UV[2],UVs[2],'UV2') if len(UV)>=3 else '')
-                      ,(Index(UV[3],UVs[3],'UV3') if len(UV)>=4 else '')
-                      ,(Index(UV[4],UVs[4],'UV4') if len(UV)>=5 else '')
-                      ,(Index(UV[5],UVs[5],'UV5') if len(UV)>=6 else '')
-                      ,(Index(UV[6],UVs[6],'UV6') if len(UV)>=7 else '')
-                      ,(Index(UV[7],UVs[7],'UV7') if len(UV)==8 else '')
-                      ) if type(UV)==tuple else (Index(UV,UVs[0]),'','','','','','','')
+            UVIDs = ( (__Index(UV[0],UVs[0],'UV0')
+                      ,(__Index(UV[1],UVs[1],'UV1') if len(UV)>=2 else '')
+                      ,(__Index(UV[2],UVs[2],'UV2') if len(UV)>=3 else '')
+                      ,(__Index(UV[3],UVs[3],'UV3') if len(UV)>=4 else '')
+                      ,(__Index(UV[4],UVs[4],'UV4') if len(UV)>=5 else '')
+                      ,(__Index(UV[5],UVs[5],'UV5') if len(UV)>=6 else '')
+                      ,(__Index(UV[6],UVs[6],'UV6') if len(UV)>=7 else '')
+                      ,(__Index(UV[7],UVs[7],'UV7') if len(UV)==8 else '')
+                      ) if type(UV)==tuple else (__Index(UV,UVs[0]),'','','','','','','')
                     )
             
             VIEWER.Libs[3][ActiveObject][3][3][5][-1][1]+=[[VID,NID,CIDs,UVIDs]]
@@ -352,7 +360,7 @@ def SetWeight( BoneName=0, Weight=1.0, VertID='' ): #VertID is a TODO (should ac
                         WGrps,found = SD[3][4],0
                         Vid = SD[3][5][-1][1][-1][0] #vert index from current primitive's current facepoint
                         if len(WGrps)>0:
-                            #'''
+                            '''
                             while WGid < len(WGrps)-1 or not found: #faster (stops if found or at end)
                                 WGN,WGFs,WGVs = WGrps[WGid]
                                 if WGN == BoneName: #append Vid to an existing weight group
@@ -386,6 +394,88 @@ def SetWeight( BoneName=0, Weight=1.0, VertID='' ): #VertID is a TODO (should ac
 
 #___________________________________________________________________________________________
 
+#set the current mesh object with a material or define new materials to be used
+def SetMaterial(Name="Material0"):
+    global ActiveObject, ActiveMaterial
+    #check if our material exists or create a new material
+    MID = __GetMID(Name)
+    if MID!='': #if so, update the material
+        Textures = VIEWER.Libs[4][MID][3] #preserve the textures
+        ActiveMaterial = MID
+    else:
+        VIEWER.Libs[4] += [[Name, '', [[1.0,1.0,1.0,1.0],[1.0,1.0,1.0,1.0],[0.5,0.5,0.5,1.0],[0.0,0.0,0.0,0.0],25.0], [], [], []]]
+        ActiveMaterial = len(VIEWER.Libs[4])-1
+
+    if ActiveObject != None:
+        SD = VIEWER.Libs[3][ActiveObject][3]
+        if SD[0]=="_Mesh": SD[2] = ActiveMaterial
+
+    SetMaterial.func_defaults=( "Material"+str(len(VIEWER.Libs[4])), )
+
+#set the colors of the current material
+def SetMatColors( Ambient = None, Diffuse = None, Specular = None, Emmisive = None, Shine = None ):
+    global ActiveMaterial
+    r = 1.0/255
+
+    if len(VIEWER.Libs[4])>0:
+        try:
+            AR,AG,AB,AA = Ambient
+            if type(AR) == int: AR,AG,AB,AA = AR*r,AG*r,AB*r,AA*r
+        except: AR,AG,AB,AA = VIEWER.Libs[4][ActiveMaterial][2][0]
+
+        try:
+            DR,DG,DB,DA = Diffuse
+            if type(DR) == int: DR,DG,DB,DA = DR*r,DG*r,DB*r,DA*r
+        except: DR,DG,DB,DA = VIEWER.Libs[4][ActiveMaterial][2][1]
+
+        try:
+            SR,SG,SB,SA = Specular
+            if type(SR) == int: SR,SG,SB,SA = SR*r,SG*r,SB*r,SA*r
+        except: SR,SG,SB,SA = VIEWER.Libs[4][ActiveMaterial][2][2]
+
+        try:
+            ER,EG,EB,EA = Emmisive
+            if type(ER) == int: ER,EG,EB,EA = ER*r,EG*r,EB*r,EA*r
+        except: ER,EG,EB,EA = VIEWER.Libs[4][ActiveMaterial][2][3]
+
+        if Shine==None: Shine=VIEWER.Libs[4][ActiveMaterial][2][4]
+
+        VIEWER.Libs[4][ActiveMaterial][2] = [[AR,AG,AB,AA],[DR,DG,DB,DA],[SR,SG,SB,SA],[ER,EG,EB,EA],Shine]
+
+#___________________________________________________________________________________________
+
+def SetTexture(Name="Texture0"):
+    global ActiveMaterial,ActiveTexture
+    
+    TID = __GetTID(Name)
+    if TID!='':
+        ActiveTexture = TID
+    else:
+        VIEWER.Libs[6] += [[Name,[],[],[],'',[]]] #TexName,TexParams,TReserved1,TReserved2,ImageName,TReserved3
+        ActiveTexture = len(VIEWER.Libs[6])-1
+
+    if ActiveMaterial!=None:
+        if ActiveTexture not in VIEWER.Libs[4][ActiveMaterial][3]:
+            VIEWER.Libs[4][ActiveMaterial][3] += [ActiveTexture]
+
+    SetTexture.func_defaults=( "Texture"+str(len(VIEWER.Libs[6])), )
+
+#___________________________________________________________________________________________
+
+def SetImage(Name="Image0",Width=0,Height=0,Data=[]):
+    global ActiveTexture,ActiveImage
+    
+    IID = __GetIID(Name)
+    if IID!='': ActiveImage = IID
+    else:
+        VIEWER.Libs[7] += [[Name,Width,Height,Data,[]]] #Pallet not supported yet
+        ActiveImage = len(VIEWER.Libs[7])-1
+
+    if ActiveTexture!=None: VIEWER.Libs[6][ActiveTexture][4] = Name
+
+    SetImage.func_defaults=( "Image"+str(len(VIEWER.Libs[7])), )
+
+#___________________________________________________________________________________________
 
 #return the mesh-objects from either the specified scene, or from the object library
 def GetMeshObjects(Scene=''):
